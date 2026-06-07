@@ -1,0 +1,77 @@
+Analyze how well the resume matches the job description below. Apply STRICT, evidence-based scoring. Do not inflate scores.
+
+## RESUME
+---
+{{ resume_text }}
+---
+
+## JOB DESCRIPTION
+---
+{{ job_description }}
+---
+
+## ANALYSIS STEPS (follow in order)
+
+1. **Extract required skills** from the JD (must-have vs nice-to-have vs bonus).
+2. **Extract experience requirements** (years, seniority, domain).
+3. **Extract key keywords** (technologies, tools, methodologies, responsibilities).
+4. **Compare against resume** — only count what is explicitly stated or clearly demonstrated.
+5. **Apply score caps** from the system instructions before finalizing scores.
+6. **List honest gaps** — every missing required skill must appear in `missing_skills`.
+
+## SCORING FIELDS
+
+| Field | How to compute |
+|-------|----------------|
+| `match_score` | Weighted overall fit (required skills 40%, experience 30%, keywords 20%, domain/relevance 10%). Apply mandatory caps. |
+| `skill_match_percentage` | % of JD **required** skills explicitly found in resume. |
+| `experience_match` | How well years, seniority, and role type align with JD. |
+| `keyword_match_percentage` | % of important JD keywords/terms found in resume. |
+
+## STRICT MATCHING RULES
+
+**Counts as a match:**
+- Skill/technology named in resume skills, work bullets, or project descriptions
+- Responsibility or outcome that directly maps to a JD requirement
+
+**Does NOT count as a match:**
+- Skill mentioned only in the JD, not in the resume
+- Vague overlap ("software development" without matching stack)
+- Education alone without applied experience for hands-on requirements
+- Assumed knowledge from job titles without supporting detail
+
+**Importance values for skills:** `required`, `nice_to_have`, or `bonus` — classify based on JD language ("must have", "required" → required; "preferred", "plus" → nice_to_have; optional extras → bonus).
+
+## LIST CONSTRAINTS
+- `matched_skills`: only skills with clear resume evidence
+- `missing_skills`: all required JD skills not found in resume
+- `matched_keywords`: top terms found in both documents
+- `strengths`: 2–5 items, each tied to JD requirements
+- `gaps`: 2–5 items, each naming a specific JD requirement gap
+- `recommendations`: 2–5 actionable improvements to improve match
+
+## REQUIRED JSON OUTPUT
+
+Return ONLY this JSON structure (all fields required):
+
+{
+    "match_score": 0,
+    "skill_match_percentage": 0,
+    "experience_match": 0,
+    "keyword_match_percentage": 0,
+    "matched_skills": [
+        {"skill": "string", "found_in_resume": true, "importance": "required", "confidence": 0}
+    ],
+    "missing_skills": [
+        {"skill": "string", "found_in_resume": false, "importance": "required", "confidence": 0}
+    ],
+    "matched_keywords": [
+        {"keyword": "string", "found_in_resume": true, "frequency_in_jd": 0, "frequency_in_resume": 0}
+    ],
+    "experience_summary": "string",
+    "strengths": ["string"],
+    "gaps": ["string"],
+    "recommendations": ["string"]
+}
+
+**REMINDER:** Be conservative. A score above 70 requires strong proof. When in doubt, score lower and document the gap.
