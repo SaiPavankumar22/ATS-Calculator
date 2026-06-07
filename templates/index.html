@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Hiring Agent - Resume Evaluator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .upload-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f0ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8e4ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .upload-area p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-area .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f4f8;
+            border-radius: 6px;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .results-section {
+            display: none;
+            flex-direction: column;
+        }
+
+        .results-section.show {
+            display: flex;
+        }
+
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .score-card .score-number {
+            font-size: 3.5em;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .score-card .score-label {
+            font-size: 0.95em;
+            opacity: 0.95;
+        }
+
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .score-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .score-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .score-item-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .score-item-value {
+            color: #333;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .score-item-evidence {
+            color: #666;
+            font-size: 0.85em;
+            line-height: 1.4;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .feedback-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feedback-list li {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .feedback-list.strengths li {
+            border-left: 4px solid #28a745;
+        }
+
+        .feedback-list.improvements li {
+            border-left: 4px solid #ffc107;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .info-item {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .list-item {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .list-item-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .list-item-subtitle {
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .list-item-description {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .bonus-points, .deductions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .bonus-points {
+            border-left: 4px solid #28a745;
+        }
+
+        .deductions {
+            border-left: 4px solid #dc3545;
+        }
+
+        .bonus-deduction-item {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .bonus-deduction-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .bonus-deduction-title {
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bonus-deduction-points {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .bonus .bonus-deduction-points {
+            color: #28a745;
+        }
+
+        .deduction .bonus-deduction-points {
+            color: #dc3545;
+        }
+
+        .bonus-deduction-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            display: none;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        /* JD Match Styles */
+        .jd-match-card {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .jd-match-card {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .match-score-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .match-score-box.excellent {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .match-score-box.good {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+        }
+
+        .match-score-box.fair {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+        }
+
+        .match-score-box.poor {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .match-score-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .match-score-label {
+            font-size: 0.9em;
+            opacity: 0.95;
+        }
+
+        .skill-match-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .skill-match-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .skill-item {
+            padding: 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+
+        .skill-item.missing {
+            border-left-color: #dc3545;
+            opacity: 0.7;
+        }
+
+        .skill-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .skill-importance {
+            font-size: 0.8em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+
+        .skill-confidence {
+            font-size: 0.85em;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .keyword-match-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .keyword-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border: 2px solid #667eea;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .keyword-badge.found {
+            border-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .recommendations-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+            margin-top: 20px;
+        }
+
+        .recommendation-item {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #17a2b8;
+        }
+
+        .recommendation-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .recommendation-text {
+            color: #333;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .no-jd-message {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 ATS Hiring Agent</h1>
+            <p>Resume Evaluation System Powered by AI</p>
+        </div>
+
+        <div class="content">
+            <!-- Left Column: Upload Section -->
+            <div class="upload-section">
+                <h2>Upload Resume</h2>
+                <div class="upload-area" id="uploadArea">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p>Drag and drop your resume PDF here or <span class="highlight">click to browse</span></p>
+                    <small style="color: #999;">Maximum file size: 10MB</small>
+                </div>
+                <div id="fileName" class="file-name" style="display: none;"></div>
+                
+                <div style="margin-top: 20px;">
+                    <label for="jobDescription" style="color: #333; font-weight: 500; display: block; margin-bottom: 8px;">
+                        Job Description (Optional)
+                    </label>
+                    <textarea 
+                        id="jobDescription" 
+                        placeholder="Paste the job description here to get JD match scoring..."
+                        style="width: 100%; height: 150px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-family: monospace; font-size: 0.9em; resize: vertical; border-color: #667eea;"
+                    ></textarea>
+                    <small style="color: #999; display: block; margin-top: 5px;">
+                        Add job description to get skill matching, keyword analysis, and overall fit score
+                    </small>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn-primary" id="uploadBtn">Upload & Evaluate</button>
+                    <button class="btn-secondary" id="clearBtn" onclick="clearUpload()">Clear</button>
+                </div>
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your resume...</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Results Section -->
+            <div class="results-section" id="resultsSection">
+                <h2>Evaluation Results</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
+                    <button class="tab-btn" onclick="switchTab('jdmatch', this)">JD Match</button>
+                    <button class="tab-btn" onclick="switchTab('details', this)">Resume Details</button>
+                </div>
+
+                <!-- Overview Tab -->
+                <div id="overview" class="tab-content active">
+                    <div class="score-card">
+                        <div class="score-number" id="finalScore">0</div>
+                        <div class="score-label">Final Score (0-120)</div>
+                    </div>
+
+                    <div class="score-breakdown" id="categoryScores"></div>
+
+                    <div id="strengthsSection" class="section" style="display: none;">
+                        <div class="section-title">💪 Key Strengths</div>
+                        <ul id="strengthsContent" class="feedback-list strengths"></ul>
+                    </div>
+
+                    <div id="improvementsSection" class="section" style="display: none;">
+                        <div class="section-title">🔧 Areas for Improvement</div>
+                        <ul id="improvementsContent" class="feedback-list improvements"></ul>
+                    </div>
+
+                    <div id="bonusSection" class="bonus-points bonus" style="display: none;">
+                        <div class="section-title">🎁 Bonus Points</div>
+                        <div id="bonusContent"></div>
+                    </div>
+
+                    <div id="deductionSection" class="deductions deduction" style="display: none;">
+                        <div class="section-title">⚠️ Deductions</div>
+                        <div id="deductionContent"></div>
+                    </div>
+                </div>
+
+                <!-- JD Match Tab -->
+                <div id="jdmatch" class="tab-content">
+                    <div id="jdmatchContent"></div>
+                </div>
+
+                <!-- Details Tab -->
+                <div id="details" class="tab-content">
+                    <div id="resumeDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Initialize upload area
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        // File selection via click
+        uploadArea.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf';
+            input.addEventListener('change', handleFileSelect);
+            input.click();
+        });
+
+        // File selection via drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf') {
+                    selectedFile = file;
+                    displayFileName(file.name);
+                } else {
+                    showError('Please upload a PDF file');
+                }
+            }
+        });
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                selectedFile = files[0];
+                displayFileName(selectedFile.name);
+            }
+        }
+
+        function displayFileName(name) {
+            const fileNameDiv = document.getElementById('fileName');
+            fileNameDiv.textContent = '✓ File selected: ' + name;
+            fileNameDiv.style.display = 'block';
+        }
+
+        function clearUpload() {
+            selectedFile = null;
+            document.getElementById('fileName').style.display = 'none';
+            document.getElementById('jobDescription').value = '';
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('successMessage').classList.remove('show');
+            document.getElementById('resultsSection').classList.remove('show');
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('Please select a PDF file first');
+                return;
+            }
+
+            // Validate file size
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                showError('File too large. Maximum size is 10MB.');
+                return;
+            }
+
+            await evaluateResume();
+        });
+
+        async function evaluateResume() {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            // Add job description if provided
+            const jobDescription = document.getElementById('jobDescription').value;
+            if (jobDescription.trim()) {
+                formData.append('job_description', jobDescription);
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('uploadBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                    document.getElementById('resultsSection').classList.add('show');
+                    showSuccess('Resume evaluated successfully!');
+                } else {
+                    showError(data.error || 'Failed to evaluate resume');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+
+        function displayResults(data) {
+            const evaluation = data.evaluation;
+            const resume = data.resume_data;
+
+            // Reset sections from previous evaluation
+            document.getElementById('bonusSection').style.display = 'none';
+            document.getElementById('deductionSection').style.display = 'none';
+            document.getElementById('strengthsSection').style.display = 'none';
+            document.getElementById('improvementsSection').style.display = 'none';
+
+            // Display final score
+            document.getElementById('finalScore').textContent = evaluation.final_score;
+
+            // Display category scores with evidence
+            const categoryScoresDiv = document.getElementById('categoryScores');
+            categoryScoresDiv.innerHTML = '';
+            for (const [category, catData] of Object.entries(evaluation.category_scores)) {
+                const categoryName = category.replace(/_/g, ' ').toUpperCase();
+                const score = typeof catData === 'object' ? catData.score : catData;
+                const max = typeof catData === 'object' ? catData.max : '';
+                const evidence = typeof catData === 'object' ? catData.evidence : '';
+                categoryScoresDiv.innerHTML += `
+                    <div class="score-item">
+                        <div class="score-item-label">${categoryName}</div>
+                        <div class="score-item-value">${score}${max ? ` / ${max}` : ''}</div>
+                        ${evidence ? `<div class="score-item-evidence">${evidence}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Display key strengths
+            if (evaluation.key_strengths && evaluation.key_strengths.length > 0) {
+                document.getElementById('strengthsSection').style.display = 'block';
+                document.getElementById('strengthsContent').innerHTML =
+                    evaluation.key_strengths.map(s => `<li>${s}</li>`).join('');
+            }
+
+            // Display areas for improvement
+            if (evaluation.areas_for_improvement && evaluation.areas_for_improvement.length > 0) {
+                document.getElementById('improvementsSection').style.display = 'block';
+                document.getElementById('improvementsContent').innerHTML =
+                    evaluation.areas_for_improvement.map(a => `<li>${a}</li>`).join('');
+            }
+
+            // Display bonus points
+            if (evaluation.bonus_points && evaluation.bonus_points.total > 0) {
+                document.getElementById('bonusSection').style.display = 'block';
+                document.getElementById('bonusContent').innerHTML = `
+                    <div class="bonus-deduction-item">
+                        <div class="bonus-deduction-title">
+                            <span>Total Bonus</span>
+                            <span class="bonus-deduction-points">+${evaluation.bonus_points.total}</span>
+                        </div>
+                        ${evaluation.bonus_points.breakdown ? `<div class="bonus-deduction-description">${evaluation.bonus_points.breakdown}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Display deductions
+            if (evaluation.deductions && evaluation.deductions.total > 0) {
+                document.getElementById('deductionSection').style.display = 'block';
+                document.getElementById('deductionContent').innerHTML = `
+                    <div class="bonus-deduction-item">
+                        <div class="bonus-deduction-title">
+                            <span>Total Deductions</span>
+                            <span class="bonus-deduction-points">-${evaluation.deductions.total}</span>
+                        </div>
+                        ${evaluation.deductions.reasons ? `<div class="bonus-deduction-description">${evaluation.deductions.reasons}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Display resume details
+            displayResumeDetails(resume);
+
+            // Always populate JD match tab (shows placeholder if no JD provided)
+            displayJDMatch(data.jd_match);
+        }
+
+        function displayResumeDetails(resume) {
+            let html = '';
+
+            // Basics section
+            if (resume.basics) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">👤 Personal Information</div>
+                        <div class="info-item">
+                            <div class="info-label">Name</div>
+                            <div class="info-value">${resume.basics.name || 'N/A'}</div>
+                        </div>
+                        ${resume.basics.email ? `
+                            <div class="info-item">
+                                <div class="info-label">Email</div>
+                                <div class="info-value">${resume.basics.email}</div>
+                            </div>
+                        ` : ''}
+                        ${resume.basics.phone ? `
+                            <div class="info-item">
+                                <div class="info-label">Phone</div>
+                                <div class="info-value">${resume.basics.phone}</div>
+                            </div>
+                        ` : ''}
+                        ${resume.basics.summary ? `
+                            <div class="info-item">
+                                <div class="info-label">Summary</div>
+                                <div class="info-value">${resume.basics.summary}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Work experience
+            if (resume.work && resume.work.length > 0) {
+                html += '<div class="section"><div class="section-title">💼 Work Experience</div>';
+                resume.work.forEach(job => {
+                    html += `
+                        <div class="list-item">
+                            <div class="list-item-title">${job.position || 'N/A'}</div>
+                            <div class="list-item-subtitle">${job.name || ''} ${job.startDate ? `(${job.startDate} - ${job.endDate || 'Present'})` : ''}</div>
+                            ${job.summary ? `<div class="list-item-description">${job.summary}</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Education
+            if (resume.education && resume.education.length > 0) {
+                html += '<div class="section"><div class="section-title">🎓 Education</div>';
+                resume.education.forEach(edu => {
+                    html += `
+                        <div class="list-item">
+                            <div class="list-item-title">${edu.studyType || ''} in ${edu.area || ''}</div>
+                            <div class="list-item-subtitle">${edu.institution || ''} ${edu.startDate ? `(${edu.startDate} - ${edu.endDate || 'Present'})` : ''}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Skills
+            if (resume.skills && resume.skills.length > 0) {
+                html += '<div class="section"><div class="section-title">🛠️ Skills</div>';
+                resume.skills.forEach(skill => {
+                    const keywords = skill.keywords ? skill.keywords.join(', ') : '';
+                    html += `
+                        <div class="list-item">
+                            <div class="list-item-title">${skill.name || ''}</div>
+                            ${keywords ? `<div class="list-item-description">${keywords}</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Projects
+            if (resume.projects && resume.projects.length > 0) {
+                html += '<div class="section"><div class="section-title">📁 Projects</div>';
+                resume.projects.forEach(proj => {
+                    html += `
+                        <div class="list-item">
+                            <div class="list-item-title">${proj.name || ''}</div>
+                            ${proj.description ? `<div class="list-item-description">${proj.description}</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('resumeDetails').innerHTML = html;
+        }
+
+        function displayJDMatch(jdMatch) {
+            if (!jdMatch) {
+                document.getElementById('jdmatchContent').innerHTML = '<div class="no-jd-message">No job description provided for matching analysis</div>';
+                return;
+            }
+
+            let html = '<div class="jd-match-card">';
+
+            // Overall match score
+            const matchColor = getScoreColor(jdMatch.match_score);
+            html += `
+                <div class="match-score-box ${matchColor}">
+                    <div class="match-score-number">${jdMatch.match_score}%</div>
+                    <div class="match-score-label">Overall Match</div>
+                </div>
+            `;
+
+            // Skill match percentage
+            const skillColor = getScoreColor(jdMatch.skill_match_percentage);
+            html += `
+                <div class="match-score-box ${skillColor}">
+                    <div class="match-score-number">${jdMatch.skill_match_percentage}%</div>
+                    <div class="match-score-label">Skills Match</div>
+                </div>
+            `;
+
+            // Experience match
+            const expColor = getScoreColor(jdMatch.experience_match);
+            html += `
+                <div class="match-score-box ${expColor}">
+                    <div class="match-score-number">${jdMatch.experience_match}%</div>
+                    <div class="match-score-label">Experience Level</div>
+                </div>
+            `;
+
+            // Keyword match percentage
+            const keywordColor = getScoreColor(jdMatch.keyword_match_percentage);
+            html += `
+                <div class="match-score-box ${keywordColor}">
+                    <div class="match-score-number">${jdMatch.keyword_match_percentage}%</div>
+                    <div class="match-score-label">Keywords Match</div>
+                </div>
+            `;
+
+            html += '</div>';
+
+            // Experience summary
+            if (jdMatch.experience_summary) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">📊 Experience Summary</div>
+                        <div class="info-item">
+                            <div class="info-value">${jdMatch.experience_summary}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Matched skills
+            if (jdMatch.matched_skills && jdMatch.matched_skills.length > 0) {
+                html += '<div class="section"><div class="section-title">✓ Matched Skills</div><div class="skill-match-list">';
+                jdMatch.matched_skills.forEach(skill => {
+                    html += `
+                        <div class="skill-item">
+                            <div class="skill-name">${skill.skill}</div>
+                            <div style="font-size: 0.85em;">
+                                <span class="skill-importance">${skill.importance}</span>
+                                <span class="skill-confidence">${skill.confidence}% confidence</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            }
+
+            // Missing skills
+            if (jdMatch.missing_skills && jdMatch.missing_skills.length > 0) {
+                html += '<div class="section"><div class="section-title">⚠️ Missing Skills</div><div class="skill-match-list">';
+                jdMatch.missing_skills.forEach(skill => {
+                    html += `
+                        <div class="skill-item missing">
+                            <div class="skill-name">${skill.skill}</div>
+                            <div style="font-size: 0.85em;">
+                                <span class="skill-importance">${skill.importance}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            }
+
+            // Matched keywords
+            if (jdMatch.matched_keywords && jdMatch.matched_keywords.length > 0) {
+                html += '<div class="section"><div class="section-title">🔑 Key Terms Match</div><div class="keyword-match-list">';
+                jdMatch.matched_keywords.forEach(keyword => {
+                    html += `<span class="keyword-badge found">${keyword.keyword}</span>`;
+                });
+                html += '</div></div>';
+            }
+
+            // Strengths
+            if (jdMatch.strengths && jdMatch.strengths.length > 0) {
+                html += '<div class="section"><div class="section-title">💪 Your Strengths</div>';
+                jdMatch.strengths.forEach(strength => {
+                    html += `<div class="list-item"><div class="list-item-description">• ${strength}</div></div>`;
+                });
+                html += '</div>';
+            }
+
+            // Gaps
+            if (jdMatch.gaps && jdMatch.gaps.length > 0) {
+                html += '<div class="section"><div class="section-title">🔴 Gaps to Address</div>';
+                jdMatch.gaps.forEach(gap => {
+                    html += `<div class="list-item" style="border-left-color: #dc3545;"><div class="list-item-description">• ${gap}</div></div>`;
+                });
+                html += '</div>';
+            }
+
+            // Recommendations
+            if (jdMatch.recommendations && jdMatch.recommendations.length > 0) {
+                html += '<div class="recommendations-list"><div class="section-title">💡 Recommendations</div>';
+                jdMatch.recommendations.forEach(rec => {
+                    html += `<div class="recommendation-item"><div class="recommendation-text">• ${rec}</div></div>`;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('jdmatchContent').innerHTML = html;
+        }
+
+        function getScoreColor(score) {
+            if (score >= 85) return 'excellent';
+            if (score >= 70) return 'good';
+            if (score >= 50) return 'fair';
+            return 'poor';
+        }
+
+        function switchTab(tabName, btn) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+
+            if (btn) {
+                btn.classList.add('active');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            setTimeout(() => {
+                successDiv.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
