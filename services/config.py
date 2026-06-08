@@ -22,3 +22,9 @@ OPEN_BROWSER = os.getenv("OPEN_BROWSER", "true" if DEBUG else "false").lower() i
     "yes",
 )
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
+DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE", "true" if DEBUG else "false").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+CACHE_DIR = PROJECT_ROOT / "cache"

@@ -80,9 +80,10 @@ flowchart TD
 1. **Extract text** — The PDF is converted to structured Markdown text.
 2. **Parse sections** — The LLM extracts each resume section using dedicated Jinja prompts.
 3. **Normalize** — Raw LLM output is transformed into [JSON Resume](https://jsonresume.org/) format.
-4. **Evaluate** — A separate prompt scores open source, projects, production experience, and technical skills.
-5. **Match JD** *(optional)* — If a job description is provided, a strict matcher compares resume vs JD.
-6. **Respond** — Results are returned as JSON and rendered in the browser.
+4. **Enrich with GitHub** *(if GitHub URL on resume)* — fetches repos, ranks top 7 via LLM.
+5. **Evaluate** — scores open source, projects, production experience, and technical skills using resume + GitHub text.
+6. **Match JD** *(optional)* — strict comparison against job description.
+7. **Respond** — JSON returned to web UI or printed in CLI.
 
 ---
 
@@ -90,36 +91,34 @@ flowchart TD
 
 ```
 hiring-agent/
-├── app.py                          # FastAPI entry point and API routes
+├── app.py                          # FastAPI web app
+├── score.py                        # Thin CLI shim (delegates to services/score.py)
 ├── services/                       # Core business logic
 │   ├── __init__.py
-│   ├── config.py                   # Environment settings (HOST, PORT, CORS, etc.)
-│   ├── pdf.py                      # PDF extraction and section parsing
-│   ├── evaluator.py                # Resume scoring engine
-│   ├── jd_matcher.py               # Job description matcher
-│   ├── models.py                   # Pydantic schemas and LLM provider classes
-│   ├── llm_utils.py                # Provider initialization and JSON cleanup
-│   ├── prompt.py                   # Model names, provider mapping, parameters
-│   ├── transform.py                # LLM JSON → JSON Resume normalization
-│   └── pymupdf_rag.py              # PDF-to-Markdown conversion
+│   ├── config.py
+│   ├── pdf.py
+│   ├── evaluator.py
+│   ├── jd_matcher.py
+│   ├── github.py                   # GitHub API + repo ranking (4+ commits)
+│   ├── pipeline.py                 # Shared web + CLI workflow
+│   ├── score.py                    # CLI implementation
+│   ├── resume_text.py              # Text builders for LLM input
+│   ├── models.py
+│   ├── llm_utils.py
+│   ├── prompt.py
+│   ├── transform.py
+│   └── pymupdf_rag.py
 ├── prompts/
-│   ├── template_manager.py         # Jinja template loader and renderer
+│   ├── template_manager.py
 │   └── templates/
-│       ├── basics.jinja            # Section extraction prompts
-│       ├── work.jinja
-│       ├── education.jinja
-│       ├── skills.jinja
-│       ├── projects.jinja
-│       ├── awards.jinja
-│       ├── system_message.jinja
-│       ├── resume_evaluation_criteria.jinja
-│       ├── resume_evaluation_system_message.jinja
-│       ├── jd_matching_criteria.jinja
-│       └── jd_matching_system_message.jinja
+│       ├── basics.jinja … awards.jinja
+│       ├── resume_evaluation_*.jinja
+│       ├── jd_matching_*.jinja
+│       └── github_project_selection.jinja
 ├── templates/
-│   └── index.html                  # Single-page web UI
+│   └── index.html
 ├── requirements.txt
-├── .env.example                    # Environment variable template
+├── .env.example
 └── README.md
 ```
 
@@ -197,6 +196,8 @@ All settings are loaded from `.env` via `python-dotenv`. See `.env.example` for 
 |----------|---------|-------------|
 | `NEBIUS_API_KEY` | — | **Required.** Nebius AI Studio API key |
 | `DEFAULT_MODEL` | `google/gemma-3-27b-it` | Nebius model identifier |
+| `GITHUB_TOKEN` | — | Optional. Raises GitHub API limit to 5000 req/hour |
+| `DEVELOPMENT_MODE` | `false` | Cache parsed resume + GitHub data in `cache/` |
 
 ### Supported models
 
@@ -225,6 +226,13 @@ python -m uvicorn app:app --host 0.0.0.0 --port 5000
 ```bash
 # Set in .env: DEBUG=true, OPEN_BROWSER=true
 python app.py
+```
+
+### CLI (batch scoring)
+
+```bash
+python -m services.score path/to/resume.pdf
+# or: python score.py path/to/resume.pdf
 ```
 
 ### Access points

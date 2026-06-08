@@ -473,6 +473,36 @@
             display: block;
         }
 
+        .github-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #333;
+        }
+
+        .github-stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+
+        .github-stat .label { color: #666; }
+        .github-stat .value { color: #333; font-weight: 600; }
+
+        .project-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .project-type.open_source { background: #d4edda; color: #155724; }
+        .project-type.self_project { background: #fff3cd; color: #856404; }
+
         /* JD Match Styles */
         .jd-match-card {
             display: grid;
@@ -684,6 +714,7 @@
                     <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
                     <button class="tab-btn" onclick="switchTab('jdmatch', this)">JD Match</button>
                     <button class="tab-btn" onclick="switchTab('details', this)">Resume Details</button>
+                    <button class="tab-btn" onclick="switchTab('github', this)">GitHub Profile</button>
                 </div>
 
                 <!-- Overview Tab -->
@@ -724,6 +755,11 @@
                 <!-- Details Tab -->
                 <div id="details" class="tab-content">
                     <div id="resumeDetails"></div>
+                </div>
+
+                <!-- GitHub Tab -->
+                <div id="github" class="tab-content">
+                    <div id="githubProfile"></div>
                 </div>
             </div>
         </div>
@@ -925,6 +961,9 @@
 
             // Always populate JD match tab (shows placeholder if no JD provided)
             displayJDMatch(data.jd_match);
+
+            // Display GitHub enrichment data
+            displayGitHubProfile(data.github_data);
         }
 
         function displayResumeDetails(resume) {
@@ -1026,6 +1065,56 @@
             }
 
             document.getElementById('resumeDetails').innerHTML = html;
+        }
+
+        function displayGitHubProfile(githubData) {
+            const container = document.getElementById('githubProfile');
+            if (!githubData || !githubData.profile) {
+                container.innerHTML = '<p style="color: #999; padding: 20px;">No GitHub profile found on this resume, or GitHub data could not be fetched.</p>';
+                return;
+            }
+
+            const profile = githubData.profile;
+            let html = '<div class="github-section">';
+            html += `<h3 style="margin-bottom: 12px;">@${profile.username || 'github-user'}</h3>`;
+            if (profile.bio) {
+                html += `<div class="info-item"><div class="info-value">${profile.bio}</div></div>`;
+            }
+            html += `
+                <div class="github-stat"><span class="label">Public Repos</span><span class="value">${profile.public_repos || 0}</span></div>
+                <div class="github-stat"><span class="label">Followers</span><span class="value">${profile.followers || 0}</span></div>
+                <div class="github-stat"><span class="label">Following</span><span class="value">${profile.following || 0}</span></div>
+            `;
+            html += '</div>';
+
+            const projects = githubData.projects || [];
+            if (projects.length > 0) {
+                html += '<div class="section"><div class="section-title">Top Ranked Repositories</div>';
+                projects.forEach(project => {
+                    const typeClass = project.project_type === 'open_source' ? 'open_source' : 'self_project';
+                    const typeLabel = project.project_type === 'open_source' ? 'Open Source' : 'Self Project';
+                    const stars = project.github_details ? project.github_details.stars || 0 : 0;
+                    const forks = project.github_details ? project.github_details.forks || 0 : 0;
+                    html += `
+                        <div class="list-item">
+                            <div class="list-item-title">
+                                ${project.name || 'Unnamed'}
+                                <span class="project-type ${typeClass}">${typeLabel}</span>
+                            </div>
+                            ${project.description ? `<div class="list-item-description">${project.description}</div>` : ''}
+                            ${project.reason_for_project_selection ? `<div class="list-item-description" style="font-style: italic; color: #555;">${project.reason_for_project_selection}</div>` : ''}
+                            <div style="margin-top: 8px; font-size: 0.85em; color: #999;">
+                                ⭐ ${stars} stars | 🍴 ${forks} forks
+                                ${project.author_commit_count != null ? ` | Commits: ${project.author_commit_count}` : ''}
+                            </div>
+                            ${project.github_url ? `<div style="margin-top: 6px;"><a href="${project.github_url}" target="_blank">${project.github_url}</a></div>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
         }
 
         function displayJDMatch(jdMatch) {

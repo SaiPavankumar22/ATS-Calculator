@@ -23,9 +23,12 @@ from services.config import (
     PORT,
     TEMPLATES_DIR,
 )
-from services.evaluator import ResumeEvaluator
-from services.jd_matcher import JDMatcher
 from services.pdf import PDFHandler
+from services.pipeline import (
+    calculate_raw_score,
+    evaluate_resume_pipeline,
+    normalize_final_score,
+)
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
@@ -34,14 +37,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {"pdf"}
-RAW_MAX_SCORE = 120
-
-
-def normalize_final_score(raw_score: float) -> int:
-    """Convert internal rubric score (0-120) to ATS display score (1-100)."""
-    clamped = max(0, min(RAW_MAX_SCORE, raw_score))
-    normalized = round((clamped / RAW_MAX_SCORE) * 99) + 1
-    return max(1, min(100, normalized))
 
 app = FastAPI(
     title="ATS Hiring Agent",
@@ -58,8 +53,6 @@ app.add_middleware(
 )
 
 pdf_handler = PDFHandler()
-resume_evaluator = ResumeEvaluator()
-jd_matcher = JDMatcher()
 
 
 def allowed_file(filename: str) -> bool:
@@ -72,23 +65,16 @@ def secure_filename(filename: str) -> str:
     return cleaned or "resume.pdf"
 
 
-def build_evaluation_response(evaluation, parsed_resume, jd_score, filename: str) -> dict:
+def build_evaluation_response(evaluation, parsed_resume, jd_score, github_data, filename: str) -> dict:
     scores_data = evaluation.scores
-    total_score = (
-        scores_data.open_source.score
-        + scores_data.self_projects.score
-        + scores_data.production.score
-        + scores_data.technical_skills.score
-        + evaluation.bonus_points.total
-        - evaluation.deductions.total
-    )
+    raw_score = calculate_raw_score(evaluation)
 
     return {
         "success": True,
         "file_name": filename,
         "evaluation": {
-            "final_score": normalize_final_score(total_score),
-            "raw_score": round(total_score, 1),
+            "final_score": normalize_final_score(raw_score),
+            "raw_score": round(raw_score, 1),
             "category_scores": {
                 "open_source": {
                     "score": scores_data.open_source.score,
@@ -128,28 +114,21 @@ def build_evaluation_response(evaluation, parsed_resume, jd_score, filename: str
                 if parsed_resume and parsed_resume.basics
                 else None
             ),
-            "work": [
-                w.model_dump() for w in (parsed_resume.work or [])
-            ]
+            "work": [w.model_dump() for w in (parsed_resume.work or [])]
             if parsed_resume
             else [],
-            "education": [
-                e.model_dump() for e in (parsed_resume.education or [])
-            ]
+            "education": [e.model_dump() for e in (parsed_resume.education or [])]
             if parsed_resume
             else [],
-            "skills": [
-                s.model_dump() for s in (parsed_resume.skills or [])
-            ]
+            "skills": [s.model_dump() for s in (parsed_resume.skills or [])]
             if parsed_resume
             else [],
-            "projects": [
-                p.model_dump() for p in (parsed_resume.projects or [])
-            ]
+            "projects": [p.model_dump() for p in (parsed_resume.projects or [])]
             if parsed_resume
             else [],
         },
         "jd_match": jd_score.model_dump() if jd_score else None,
+        "github_data": github_data or None,
     }
 
 
@@ -195,21 +174,17 @@ async def evaluate_resume(
             )
 
         parsed_resume = pdf_handler.extract_json_from_text(resume_text)
-        evaluation = resume_evaluator.evaluate_resume(resume_text)
 
-        jd_score = None
-        if job_description and job_description.strip() and parsed_resume:
-            try:
-                parsed_resume_dict = parsed_resume.model_dump()
-                jd_score = jd_matcher.match_resume_to_jd(
-                    resume_text, job_description, parsed_resume_dict
-                )
-            except Exception as exc:
-                logger.warning("JD matching failed (continuing anyway): %s", exc)
+        evaluation, jd_score, github_data = evaluate_resume_pipeline(
+            resume_text=resume_text,
+            parsed_resume=parsed_resume,
+            job_description=job_description,
+            include_github=True,
+        )
 
         return JSONResponse(
             content=build_evaluation_response(
-                evaluation, parsed_resume, jd_score, filename
+                evaluation, parsed_resume, jd_score, github_data, filename
             ),
             status_code=200,
         )
