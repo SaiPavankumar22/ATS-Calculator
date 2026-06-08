@@ -186,7 +186,7 @@ class PDFHandler:
         try:
             return self._extract_all_sections_separately(resume_text)
         except Exception as e:
-            logger.error(f"Error calling Ollama: {e}")
+            logger.error(f"Error during resume extraction: {e}")
             return None
 
     def extract_json_from_pdf(self, pdf_path: str) -> Optional[JSONResume]:

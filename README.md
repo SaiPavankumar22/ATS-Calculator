@@ -2,7 +2,7 @@
 
 AI-powered Applicant Tracking System that parses resume PDFs, scores candidates with explainable rubrics, and optionally matches resumes against job descriptions — all through a modern web UI and REST API.
 
-Built with **FastAPI**, **PyMuPDF**, and **LLM-backed extraction** (Ollama locally or Nebius AI Studio in the cloud). Every prompt lives in version-controlled Jinja templates so scoring behavior is transparent and easy to tune.
+Built with **FastAPI**, **PyMuPDF**, and **Nebius AI Studio** for LLM-backed extraction. Every prompt lives in version-controlled Jinja templates so scoring behavior is transparent and easy to tune.
 
 ---
 
@@ -130,9 +130,7 @@ hiring-agent/
 | Requirement | Notes |
 |-------------|-------|
 | **Python 3.11+** | Tested with 3.11 and 3.12 |
-| **LLM provider** | [Ollama](https://ollama.com/) (local) **or** [Nebius AI Studio](https://nebius.com/) (cloud API key) |
-| **Ollama models** | Pull at least one supported model (e.g. `gemma3:4b`) |
-| **Nebius** | API key from Nebius AI Studio if using cloud models |
+| **Nebius AI Studio** | API key from [Nebius](https://nebius.com/) — required |
 
 ---
 
@@ -173,20 +171,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Edit `.env` with your LLM provider and settings (see [Configuration](#configuration)).
-
-### 5. Pull an Ollama model (local setup)
-
-```bash
-ollama pull gemma3:4b
-```
-
-Set in `.env`:
-
-```env
-LLM_PROVIDER=ollama
-DEFAULT_MODEL=gemma3:4b
-```
+Edit `.env` with your Nebius API key and settings (see [Configuration](#configuration)).
 
 ---
 
@@ -210,17 +195,18 @@ All settings are loaded from `.env` via `python-dotenv`. See `.env.example` for 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_PROVIDER` | `ollama` | `ollama` or `nebius` |
-| `DEFAULT_MODEL` | `gemma3:4b` | Model identifier for your provider |
-| `NEBIUS_API_KEY` | — | Required when `LLM_PROVIDER=nebius` |
+| `NEBIUS_API_KEY` | — | **Required.** Nebius AI Studio API key |
+| `DEFAULT_MODEL` | `google/gemma-3-27b-it` | Nebius model identifier |
 
 ### Supported models
 
 Configured in `services/prompt.py`:
 
-**Ollama:** `gemma3:4b`, `gemma3:12b`, `gemma3:1b`, `qwen3:4b`, `qwen3:1.7b`, `mistral:7b`
-
-**Nebius:** `google/gemma-3-27b-it`, `google/gemma-3-12b-it`, `meta-llama/Meta-Llama-3.1-70B-Instruct`, `meta-llama/Meta-Llama-3.1-8B-Instruct`, `mistralai/Mistral-Nemo-Instruct-2407`
+- `google/gemma-3-27b-it`
+- `google/gemma-3-12b-it`
+- `meta-llama/Meta-Llama-3.1-70B-Instruct`
+- `meta-llama/Meta-Llama-3.1-8B-Instruct`
+- `mistralai/Mistral-Nemo-Instruct-2407`
 
 Model-specific temperature and `top_p` values are defined in `MODEL_PARAMETERS` inside `services/prompt.py`.
 
@@ -425,22 +411,18 @@ After editing templates, restart the server to pick up changes.
 
 ---
 
-## LLM providers
+## LLM provider
 
-### Ollama (local, default)
+This project uses **Nebius AI Studio** exclusively via the OpenAI-compatible API.
 
-- Free, runs on your machine
-- Set `LLM_PROVIDER=ollama` and `DEFAULT_MODEL` to a pulled model
-- Ensure Ollama is running: `ollama serve`
+Set in `.env`:
 
-### Nebius AI Studio (cloud)
+```env
+NEBIUS_API_KEY=your_key_here
+DEFAULT_MODEL=google/gemma-3-27b-it
+```
 
-- Set `LLM_PROVIDER=nebius`
-- Set `NEBIUS_API_KEY` in `.env`
-- Set `DEFAULT_MODEL` to a Nebius-supported model (e.g. `google/gemma-3-27b-it`)
-- Uses OpenAI-compatible API via the `openai` Python package
-
-If Nebius is selected but no API key is set, the system falls back to Ollama with a warning in the logs.
+The app will not start LLM calls without a valid `NEBIUS_API_KEY`.
 
 ---
 
@@ -452,20 +434,11 @@ The PDF may be scanned/image-only. Use a PDF with selectable text, or run OCR be
 
 ### Slow evaluation
 
-Section extraction calls the LLM six times (basics, work, education, skills, projects, awards), plus one evaluation call and optionally one JD match call. Use a smaller/faster model (e.g. `gemma3:4b`) or Nebius for better throughput.
-
-### Ollama connection errors
-
-Confirm Ollama is running and the model is pulled:
-
-```bash
-ollama list
-ollama pull gemma3:4b
-```
+Section extraction calls the LLM six times (basics, work, education, skills, projects, awards), plus one evaluation call and optionally one JD match call. Use a faster Nebius model (e.g. `google/gemma-3-12b-it`) if latency is an issue.
 
 ### Nebius authentication errors
 
-Verify `NEBIUS_API_KEY` in `.env` and that `DEFAULT_MODEL` matches a Nebius-supported model name.
+Verify `NEBIUS_API_KEY` in `.env` and that `DEFAULT_MODEL` matches a supported Nebius model name.
 
 ### JD Match tab shows placeholder
 
@@ -483,7 +456,7 @@ Ensure you run the server from the project root so `prompts/templates/` resolves
 |-------|------------|
 | API | FastAPI, Uvicorn |
 | PDF | PyMuPDF, pymupdf4llm |
-| LLM | Ollama, Nebius (OpenAI-compatible) |
+| LLM | Nebius AI Studio (OpenAI-compatible) |
 | Schemas | Pydantic v2 |
 | Prompts | Jinja2 |
 | Frontend | Vanilla HTML/CSS/JS |
