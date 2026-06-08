@@ -690,7 +690,7 @@
                 <div id="overview" class="tab-content active">
                     <div class="score-card">
                         <div class="score-number" id="finalScore">0</div>
-                        <div class="score-label">Final Score (0-120)</div>
+                        <div class="score-label">Final Score (1-100)</div>
                     </div>
 
                     <div class="score-breakdown" id="categoryScores"></div>
@@ -928,6 +928,12 @@
         }
 
         function displayResumeDetails(resume) {
+            if (!resume || (!resume.basics && !(resume.work && resume.work.length) && !(resume.education && resume.education.length) && !(resume.skills && resume.skills.length) && !(resume.projects && resume.projects.length))) {
+                document.getElementById('resumeDetails').innerHTML =
+                    '<p style="color: #999; padding: 20px;">Resume details could not be parsed. The evaluation score is still valid.</p>';
+                return;
+            }
+
             let html = '';
 
             // Basics section

@@ -22,7 +22,7 @@ from services.models import (
 )
 from services.prompt import DEFAULT_MODEL, MODEL_PARAMETERS
 from services.pymupdf_rag import to_markdown
-from services.transform import transform_parsed_data
+from services.transform import sanitize_resume_dict, transform_parsed_data
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +289,8 @@ class PDFHandler:
                 logger.error(f"⚠️ Failed to extract {section_name} section")
 
         try:
+            complete_resume = sanitize_resume_dict(complete_resume)
+
             if complete_resume.get("basics") and isinstance(
                 complete_resume["basics"], dict
             ):

@@ -6,6 +6,72 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
+def coerce_to_string(value) -> Optional[str]:
+    """Normalize LLM output that may return a URL as a list or nested value."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        for item in value:
+            if item:
+                return str(item).strip()
+        return None
+    if isinstance(value, dict):
+        for key in ("url", "href", "link"):
+            if value.get(key):
+                return str(value[key]).strip()
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def coerce_to_string_list(value) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if item]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    return [str(value).strip()]
+
+
+def sanitize_resume_dict(resume: Dict) -> Dict:
+    """Fix common LLM type mistakes before Pydantic validation."""
+    if not isinstance(resume, dict):
+        return resume
+
+    basics = resume.get("basics")
+    if isinstance(basics, dict):
+        if "url" in basics:
+            basics["url"] = coerce_to_string(basics.get("url"))
+        for profile in basics.get("profiles") or []:
+            if isinstance(profile, dict) and "url" in profile:
+                profile["url"] = coerce_to_string(profile.get("url")) or profile.get("url")
+
+    for key in ("work", "projects", "education", "volunteer"):
+        items = resume.get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if "url" in item:
+                item["url"] = coerce_to_string(item.get("url"))
+            if "highlights" in item:
+                item["highlights"] = coerce_to_string_list(item.get("highlights"))
+            if "technologies" in item:
+                item["technologies"] = coerce_to_string_list(item.get("technologies"))
+            if "skills" in item and isinstance(item.get("skills"), str):
+                item["skills"] = coerce_to_string_list(item.get("skills"))
+
+    skills = resume.get("skills")
+    if isinstance(skills, list):
+        for skill in skills:
+            if isinstance(skill, dict) and "keywords" in skill:
+                skill["keywords"] = coerce_to_string_list(skill.get("keywords"))
+
+    return resume
+
+
 def transform_parsed_data(parsed_data: Dict) -> Dict:
     try:
         if isinstance(parsed_data, dict):
@@ -210,11 +276,11 @@ def transform_work_experience(work_list: List) -> List[Dict]:
                     "position": item.get(
                         "position", item.get("type", item.get("title", ""))
                     ),
-                    "url": item.get("url", None),
+                    "url": coerce_to_string(item.get("url")),
                     "startDate": start_date,
                     "endDate": end_date,
                     "summary": item.get("summary", description),
-                    "highlights": item.get("highlights", []),
+                    "highlights": coerce_to_string_list(item.get("highlights")),
                 }
             )
     return transformed
@@ -335,8 +401,8 @@ def transform_projects(projects_list: List) -> List[Dict]:
                     "startDate": None,
                     "endDate": None,
                     "description": item.get("description", ""),
-                    "highlights": [item.get("type", "")] if item.get("type") else [],
-                    "url": item.get("url", None),
+                    "highlights": coerce_to_string_list(item.get("highlights") or ([item.get("type")] if item.get("type") else [])),
+                    "url": coerce_to_string(item.get("url")),
                     "technologies": technologies,
                     "skills": skills,
                 }
@@ -399,8 +465,8 @@ def transform_projects_comprehensive(parsed_data: Dict) -> List[Dict]:
                         "endDate": None,
                         "description": item.get("summary", ""),
                         "highlights": [],
-                        "url": item.get("url", None),
-                        "technologies": item.get("technologies", []),
+                        "url": coerce_to_string(item.get("url")),
+                        "technologies": coerce_to_string_list(item.get("technologies")),
                         "skills": skills,
                     }
                 )

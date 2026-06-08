@@ -41,7 +41,7 @@ Built with **FastAPI**, **PyMuPDF**, and **LLM-backed extraction** (Ollama local
 - Four category scores with written evidence per category
 - Bonus points and deductions with breakdowns
 - Key strengths and areas for improvement
-- Final score on a **0–120** scale
+- Final score on a **1–100** ATS scale (normalized from the internal rubric)
 
 ### Job description matching
 
@@ -283,7 +283,7 @@ Additional adjustments:
 - **Bonus points** — up to **+20** (e.g. prestigious programs, exceptional projects)
 - **Deductions** — subtracted from total (e.g. missing links, tutorial-only projects)
 
-**Final score** = category scores + bonus − deductions (range roughly **−20 to 120**)
+**Final score (displayed)** = normalized to **1–100** from the internal rubric total (categories + bonus − deductions, max 120). Category breakdowns still show their original point values (e.g. open source /35).
 
 ### Fairness
 
@@ -370,7 +370,8 @@ curl -X POST http://localhost:5000/api/evaluate \
   "success": true,
   "file_name": "resume.pdf",
   "evaluation": {
-    "final_score": 63,
+    "final_score": 53,
+    "raw_score": 63,
     "category_scores": {
       "open_source": { "score": 8, "max": 35, "evidence": "..." },
       "self_projects": { "score": 22, "max": 30, "evidence": "..." },

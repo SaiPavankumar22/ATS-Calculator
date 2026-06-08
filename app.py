@@ -34,6 +34,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {"pdf"}
+RAW_MAX_SCORE = 120
+
+
+def normalize_final_score(raw_score: float) -> int:
+    """Convert internal rubric score (0-120) to ATS display score (1-100)."""
+    clamped = max(0, min(RAW_MAX_SCORE, raw_score))
+    normalized = round((clamped / RAW_MAX_SCORE) * 99) + 1
+    return max(1, min(100, normalized))
 
 app = FastAPI(
     title="ATS Hiring Agent",
@@ -79,7 +87,8 @@ def build_evaluation_response(evaluation, parsed_resume, jd_score, filename: str
         "success": True,
         "file_name": filename,
         "evaluation": {
-            "final_score": total_score,
+            "final_score": normalize_final_score(total_score),
+            "raw_score": round(total_score, 1),
             "category_scores": {
                 "open_source": {
                     "score": scores_data.open_source.score,
